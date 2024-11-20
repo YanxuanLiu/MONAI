@@ -1,0 +1,38 @@
+name: py3-test
+
+on:
+  schedule:
+    - cron: "00 * * * *" # trigger per hour
+  workflow_dispatch:
+
+jobs:
+  py3.7-tests:
+    if: github.repository == 'YanxuanLiu/MONAI'
+    runs-on: ubuntu-latest
+    container: 
+      image: nvcr.io/nvidia/dep-py3-container-py3-7
+    steps:
+    - uses: actions/checkout@v3
+    - name: Apt setup
+      run: |
+        apt update
+        DEBIAN_FRONTEND=noninteractive apt install -yq software-properties-common
+        add-apt-repository -y ppa:deadsnakes/ppa
+        apt update
+        DEBIAN_FRONTEND=noninteractive apt install -yq python3.7 python3-pip python3.7-distutils
+        update-alternatives --install /usr/bin/python python /usr/bin/python3.7 2
+    - name: min-dep-py3 tests
+      run: |
+        which python
+        python --version
+        pwd
+        ls
+        python -m pip install --upgrade pip wheel
+        python -m pip install torch
+        python -m pip install -r requirements-min.txt
+        python -m pip list
+        BUILD_MONAI=0 python setup.py develop  # no compile of extensions
+        python -c 'import torch; print(torch.__version__); print(torch.rand(5,3))'
+        python -c "import monai; monai.config.print_debug_info()"
+        QUICKTEST=True ./runtests.sh --build --min
+        display_title "Min-dep-py3 tests ending"
